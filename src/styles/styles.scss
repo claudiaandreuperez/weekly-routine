@@ -1,11 +1,11 @@
+@use 'variables';
+
 /* Ionic base (necessari per ion-app i Capacitor) */
 @import '@ionic/angular/css/core.css';
 @import '@ionic/angular/css/normalize.css';
 @import '@ionic/angular/css/structure.css';
 @import '@ionic/angular/css/typography.css';
 @import '@ionic/angular/css/display.css';
-
-@use 'variables';
 
 *,
 *::before,

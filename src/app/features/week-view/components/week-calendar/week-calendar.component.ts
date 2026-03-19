@@ -1,20 +1,23 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { WeekService } from '@core/services/week.service';
-import { Task, DAY_NAMES_SHORT } from '@core/models/task.model';
-import { DayColumnComponent } from '../day-column/day-column.component';
+import { Task, DAY_NAMES } from '@core/models/task.model';
 import { FabButtonComponent } from '@shared/components/ui/fab-button/fab-button.component';
 import { TaskFormComponent } from '@shared/components/forms/task-form/task-form.component';
+import { TaskCardComponent } from '../task-card/task-card.component';
 import {
   formatWeekRange,
   isCurrentWeek,
   getTodayDayOfWeek,
+  addDays,
+  formatDateShort,
+  parseLocalDate,
 } from '@shared/utils/date.utils';
 
 @Component({
   selector: 'app-week-calendar',
   standalone: true,
-  imports: [CommonModule, DayColumnComponent, FabButtonComponent, TaskFormComponent],
+  imports: [CommonModule, TaskCardComponent, FabButtonComponent, TaskFormComponent],
   template: `
     <div class="week-page">
       <header class="header">
@@ -36,28 +39,54 @@ import {
         </button>
       </header>
 
-      <div class="week-scroll">
-        <div class="week-scroll-inner">
-        @for (day of days; track day) {
-          @let progress = week.getDayProgress(day);
-          <div class="day-slot">
-            <app-day-column
-              [dayIndex]="day"
-              [tasks]="week.getTasksForDay(day)"
-              [isToday]="isCurrent && day === todayIdx"
-              [isActive]="selectedDay() === day"
-              [weekStart]="week.weekStartDate()"
-              (toggleTask)="onToggle($event)"
-              (editTask)="onEdit($event)"
-              (selectDay)="selectedDay.set($event)"
-            />
-            <div class="stat-item" [class.today]="isCurrent && day === todayIdx">
-              <span class="stat-label">{{ dayLabels[day] }}</span>
-              <span class="stat-val">{{ progress.completed }}/{{ progress.total }}</span>
-            </div>
-          </div>
+      <div class="day-list">
+        @for (dayIdx of days; track dayIdx) {
+          @let dayTasks = week.getTasksForDay(dayIdx);
+          @let progress = week.getDayProgress(dayIdx);
+          @let isOpen = isDayExpanded(dayIdx);
+          <section class="day-item" [class.today]="isCurrent && dayIdx === todayIdx">
+            <button
+              type="button"
+              class="day-header"
+              (click)="toggleDay(dayIdx)"
+            >
+              <div class="day-header-left">
+                <span class="day-name">{{ dayLabels[dayIdx] }}</span>
+                <span class="day-date">{{ getDateStr(dayIdx) }}</span>
+                @if (dayTasks.length > 0) {
+                  <span class="day-progress">{{ progress.completed }}/{{ progress.total }}</span>
+                }
+              </div>
+              <svg
+                class="chevron"
+                [class.open]="isOpen"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            @if (isOpen) {
+              <div class="day-body">
+                @if (dayTasks.length === 0) {
+                  <p class="no-tasks">Sense tasques</p>
+                } @else {
+                  <div class="task-list">
+                    @for (task of dayTasks; track task.id) {
+                      <app-task-card
+                        [task]="task"
+                        (toggle)="onToggle($event)"
+                        (edit)="onEdit($event)"
+                      />
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </section>
         }
-        </div>
       </div>
     </div>
 
@@ -74,6 +103,7 @@ import {
   styles: `
     .week-page {
       padding-top: calc(var(--safe-top) + 8px);
+      padding-bottom: 24px;
     }
 
     .header {
@@ -118,79 +148,129 @@ import {
       }
     }
 
-    .week-scroll {
-      overflow-x: auto;
-      overflow-y: hidden;
-      scroll-snap-type: x mandatory;
-      padding: 0 16px 16px;
-      -webkit-overflow-scrolling: touch;
-      width: 100%;
-    }
-
-    .week-scroll-inner {
-      display: flex;
-      flex-wrap: nowrap;
-      gap: 12px;
-      min-width: min-content;
-      padding-right: 16px;
-    }
-
-    .day-slot {
-      width: calc(100vw - 32px);
-      min-width: 260px;
-      max-width: 380px;
-      flex-shrink: 0;
-      scroll-snap-align: start;
-      scroll-snap-stop: always;
+    .day-list {
+      padding: 0 16px;
       display: flex;
       flex-direction: column;
+      gap: 0;
     }
 
-    .day-slot app-day-column {
-      flex: 1;
-      min-height: 0;
-    }
-
-    .stat-item {
-      flex-shrink: 0;
-      text-align: center;
-      padding: 8px 4px;
+    .day-item {
       background: var(--bg-card);
-      border-radius: var(--radius-sm);
-      margin-top: 4px;
+      border-radius: var(--radius);
+      margin-bottom: 8px;
       box-shadow: var(--shadow-sm);
+      overflow: hidden;
 
-      &.today .stat-label {
-        color: var(--primary);
-        font-weight: 700;
+      &.today .day-header {
+        border-left: 4px solid var(--primary);
       }
     }
 
-    .stat-label {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      display: block;
+    .day-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      text-align: left;
+      background: var(--bg-card);
+      border: none;
+      border-left: 4px solid transparent;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      font: inherit;
+      color: inherit;
     }
 
-    .stat-val {
+    .day-header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .day-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .day-item.today .day-name {
+      color: var(--primary);
+    }
+
+    .day-date {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .day-progress {
       font-size: 12px;
       color: var(--text-secondary);
-      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .chevron {
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+      color: var(--text-muted);
+      transition: transform 0.25s ease;
+    }
+
+    .chevron.open {
+      transform: rotate(180deg);
+    }
+
+    .day-body {
+      padding: 0 16px 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .no-tasks {
+      padding: 16px 0;
+      margin: 0;
+      font-size: 14px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 12px;
     }
   `,
 })
 export class WeekCalendarComponent implements OnInit {
   readonly days = [0, 1, 2, 3, 4, 5, 6];
-  readonly dayLabels = DAY_NAMES_SHORT;
+  readonly dayLabels = DAY_NAMES;
   readonly todayIdx = getTodayDayOfWeek();
 
   showForm = signal(false);
   editingTask = signal<Task | null>(null);
   selectedDay = signal(this.todayIdx);
+  private expandedDays = signal<Set<number>>(new Set([getTodayDayOfWeek()]));
+
+  readonly isDayExpanded = (dayIdx: number): boolean =>
+    this.expandedDays().has(dayIdx);
 
   constructor(readonly week: WeekService) {}
+
+  toggleDay(dayIdx: number): void {
+    this.expandedDays.update((set) => {
+      const next = new Set(set);
+      if (next.has(dayIdx)) next.delete(dayIdx);
+      else next.add(dayIdx);
+      return next;
+    });
+  }
+
+  getDateStr(dayIdx: number): string {
+    const monday = parseLocalDate(this.week.weekStartDate());
+    return formatDateShort(addDays(monday, dayIdx));
+  }
 
   get weekRange(): string {
     return formatWeekRange(this.week.mondayDate());
@@ -231,27 +311,29 @@ export class WeekCalendarComponent implements OnInit {
     this.editingTask.set(null);
   }
 
-  async onSaveTask(data: Partial<Task>): Promise<void> {
+  async onSaveTask(payload: Partial<Task>[]): Promise<void> {
     const existing = this.editingTask();
-    if (existing) {
-      await this.week.updateTask(existing.id, data);
+    if (existing && payload.length > 0) {
+      await this.week.updateTask(existing.id, payload[0]);
     } else {
-      const order = await this.week.getNextOrder(data.dayOfWeek!);
-      const task: Task = {
-        id: crypto.randomUUID(),
-        title: data.title!,
-        description: data.description,
-        dayOfWeek: data.dayOfWeek!,
-        weekStartDate: this.week.weekStartDate(),
-        time: data.time,
-        completed: false,
-        category: data.category!,
-        color: data.color!,
-        isRecurring: data.isRecurring!,
-        order,
-        reminder: data.reminder,
-      };
-      await this.week.addTask(task);
+      for (const data of payload) {
+        const order = await this.week.getNextOrder(data.dayOfWeek!);
+        const task: Task = {
+          id: crypto.randomUUID(),
+          title: data.title!,
+          description: data.description,
+          dayOfWeek: data.dayOfWeek!,
+          weekStartDate: this.week.weekStartDate(),
+          time: data.time,
+          completed: false,
+          category: data.category!,
+          color: data.color!,
+          isRecurring: data.isRecurring!,
+          order,
+          reminder: data.reminder,
+        };
+        await this.week.addTask(task);
+      }
     }
     this.closeForm();
   }

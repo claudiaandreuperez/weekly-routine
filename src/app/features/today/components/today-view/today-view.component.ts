@@ -87,7 +87,7 @@ import { TimeFormatPipe } from '@shared/pipes/time-format.pipe';
           <button
             type="button"
             class="completed-toggle"
-            (click)="showCompleted.update((v) => !v)"
+            (click)="toggleShowCompleted()"
           >
             <span>Completades ({{ completedTasks().length }})</span>
             <svg
@@ -402,29 +402,35 @@ export class TodayViewComponent implements OnInit {
     this.editingTask.set(null);
   }
 
-  async onSaveTask(data: Partial<Task>): Promise<void> {
+  async onSaveTask(payload: Partial<Task>[]): Promise<void> {
     const existing = this.editingTask();
-    if (existing) {
-      await this.week.updateTask(existing.id, data);
+    if (existing && payload.length > 0) {
+      await this.week.updateTask(existing.id, payload[0]);
     } else {
-      const order = await this.week.getNextOrder(data.dayOfWeek!);
-      const task: Task = {
-        id: crypto.randomUUID(),
-        title: data.title!,
-        description: data.description,
-        dayOfWeek: data.dayOfWeek!,
-        weekStartDate: this.week.weekStartDate(),
-        time: data.time,
-        completed: false,
-        category: data.category!,
-        color: data.color!,
-        isRecurring: data.isRecurring!,
-        order,
-        reminder: data.reminder,
-      };
-      await this.week.addTask(task);
+      for (const data of payload) {
+        const order = await this.week.getNextOrder(data.dayOfWeek!);
+        const task: Task = {
+          id: crypto.randomUUID(),
+          title: data.title!,
+          description: data.description,
+          dayOfWeek: data.dayOfWeek!,
+          weekStartDate: this.week.weekStartDate(),
+          time: data.time,
+          completed: false,
+          category: data.category!,
+          color: data.color!,
+          isRecurring: data.isRecurring!,
+          order,
+          reminder: data.reminder,
+        };
+        await this.week.addTask(task);
+      }
     }
     this.closeForm();
+  }
+
+  toggleShowCompleted(): void {
+    this.showCompleted.update((v) => !v);
   }
 
   async deleteTask(id: string): Promise<void> {

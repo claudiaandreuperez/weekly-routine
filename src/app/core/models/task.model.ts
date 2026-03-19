@@ -23,11 +23,11 @@ export interface WeekTemplate {
 export type TemplateTask = Omit<Task, 'id' | 'weekStartDate' | 'completed'>;
 
 export const CATEGORIES: { name: string; color: string }[] = [
-  { name: 'Feina', color: '#6366f1' },
+  { name: 'Feina', color: '#ec4899' },
   { name: 'Exercici', color: '#10b981' },
   { name: 'Estudi', color: '#f59e0b' },
   { name: 'Personal', color: '#ec4899' },
-  { name: 'Llar', color: '#8b5cf6' },
+  { name: 'Llar', color: '#e879a0' },
   { name: 'Salut', color: '#ef4444' },
   { name: 'Oci', color: '#06b6d4' },
   { name: 'Altre', color: '#64748b' },

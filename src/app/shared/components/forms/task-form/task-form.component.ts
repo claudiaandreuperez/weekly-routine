@@ -1,7 +1,7 @@
 import { Component, input, output, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Task, CATEGORIES, DAY_NAMES } from '@core/models/task.model';
+import { Task, CATEGORIES, DAY_NAMES, DAY_NAMES_SHORT } from '@core/models/task.model';
 
 @Component({
   selector: 'app-task-form',
@@ -32,19 +32,26 @@ import { Task, CATEGORIES, DAY_NAMES } from '@core/models/task.model';
         ></textarea>
       </div>
 
-      <div class="form-row">
-        <div class="form-group half">
-          <label>Dia</label>
-          <select [(ngModel)]="dayOfWeek">
-            @for (day of dayNames; track $index) {
-              <option [ngValue]="$index">{{ day }}</option>
-            }
-          </select>
+      <div class="form-group">
+        <label>Dies</label>
+        <p class="days-hint">Tria els dies en què es repetirà la tasca</p>
+        <div class="days-grid">
+          @for (day of dayNames; track $index) {
+            <label class="day-chip">
+              <input
+                type="checkbox"
+                [checked]="selectedDays.includes($index)"
+                (change)="toggleDay($index)"
+              />
+              <span>{{ dayShort($index) }}</span>
+            </label>
+          }
         </div>
-        <div class="form-group half">
-          <label>Hora (opcional)</label>
-          <input type="time" [(ngModel)]="time" />
-        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Hora (opcional)</label>
+        <input type="time" [(ngModel)]="time" />
       </div>
 
       <div class="form-group">
@@ -183,6 +190,45 @@ import { Task, CATEGORIES, DAY_NAMES } from '@core/models/task.model';
       }
     }
 
+    .days-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin: -2px 0 8px;
+      font-weight: 400;
+    }
+
+    .days-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .day-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border-radius: var(--radius-full);
+      border: 2px solid var(--border);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+
+      input {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--primary);
+      }
+
+      &:has(input:checked) {
+        border-color: var(--primary);
+        background: color-mix(in srgb, var(--primary) 12%, transparent);
+        color: var(--primary);
+      }
+    }
+
     select,
     input[type='time'] {
       width: 100%;
@@ -300,19 +346,30 @@ export class TaskFormComponent implements OnInit {
   readonly editTask = input<Task | null>(null);
   readonly defaultDay = input(0);
   readonly close = output();
-  readonly saveTask = output<Partial<Task>>();
+  readonly saveTask = output<Partial<Task>[]>();
 
   readonly categories = CATEGORIES;
   readonly dayNames = DAY_NAMES;
 
   title = '';
   description = '';
-  dayOfWeek = 0;
+  selectedDays: number[] = [];
   time = '';
   category = CATEGORIES[0].name;
   color = CATEGORIES[0].color;
   isRecurring = false;
   reminder = false;
+
+  dayShort(idx: number): string {
+    return DAY_NAMES_SHORT[idx];
+  }
+
+  toggleDay(dayIdx: number): void {
+    const i = this.selectedDays.indexOf(dayIdx);
+    if (i === -1) this.selectedDays.push(dayIdx);
+    else this.selectedDays.splice(i, 1);
+    this.selectedDays.sort((a, b) => a - b);
+  }
 
   ngOnInit(): void {
     this.resetForm();
@@ -323,31 +380,34 @@ export class TaskFormComponent implements OnInit {
     if (task) {
       this.title = task.title;
       this.description = task.description ?? '';
-      this.dayOfWeek = task.dayOfWeek;
+      this.selectedDays = [task.dayOfWeek];
       this.time = task.time ?? '';
       this.category = task.category;
       this.color = task.color;
       this.isRecurring = task.isRecurring;
       this.reminder = task.reminder ?? false;
     } else {
-      this.dayOfWeek = this.defaultDay();
+      this.selectedDays = [this.defaultDay()];
     }
   }
 
   save(): void {
     if (!this.title.trim()) return;
-    this.saveTask.emit({
+    if (this.selectedDays.length === 0) return;
+    const base = {
       title: this.title.trim(),
       description: this.description.trim() || undefined,
-      dayOfWeek: this.dayOfWeek,
       time: this.time || undefined,
       category: this.category,
       color: this.color,
       isRecurring: this.isRecurring,
       reminder: this.reminder,
-    });
+    };
+    const payload = this.selectedDays.map((dayOfWeek) => ({ ...base, dayOfWeek }));
+    this.saveTask.emit(payload);
     this.title = '';
     this.description = '';
+    this.selectedDays = [this.defaultDay()];
     this.time = '';
     this.isRecurring = false;
     this.reminder = false;
