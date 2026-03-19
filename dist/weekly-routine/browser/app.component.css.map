@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/app.component.ts"],
+  "sourcesContent": ["\n    .app-shell {\n      padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 8px);\n      min-height: 100dvh;\n    }\n  "],
+  "mappings": ";AACI,CAAA;AACE,kBAAA,KAAA,IAAA,cAAA,EAAA,IAAA,eAAA,EAAA;AACA,cAAA;;",
+  "names": []
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/features/today/components/pending-alert/pending-alert.component.ts"],
+  "sourcesContent": ["\n    .alert {\n      display: flex;\n      align-items: center;\n      gap: 10px;\n      padding: 10px 16px;\n      background: color-mix(in srgb, var(--warning) 12%, transparent);\n      border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);\n      border-radius: var(--radius-sm);\n      color: var(--warning);\n      font-size: 14px;\n      font-weight: 500;\n      margin-bottom: 16px;\n\n      svg {\n        width: 18px;\n        height: 18px;\n        flex-shrink: 0;\n      }\n    }\n  "],
+  "mappings": ";AACI,CAAA;AACE,WAAA;AACA,eAAA;AACA,OAAA;AACA,WAAA,KAAA;AACA,cAAA,UAAA,GAAA,IAAA,EAAA,IAAA,WAAA,GAAA,EAAA;AACA,UAAA,IAAA,MAAA,UAAA,GAAA,IAAA,EAAA,IAAA,WAAA,GAAA,EAAA;AACA,iBAAA,IAAA;AACA,SAAA,IAAA;AACA,aAAA;AACA,eAAA;AACA,iBAAA;;AAEA,CAbF,MAaE;AACE,SAAA;AACA,UAAA;AACA,eAAA;;",
+  "names": []
+}
